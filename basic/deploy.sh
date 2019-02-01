@@ -46,3 +46,6 @@ install_DockerTools
 run_LogServer
 
 echo log server available on $vmName.$vmLocation.cloudapp.azure.com
+
+#clear [.htpasswd] file
+echo "" > ./log_server/nginx/.htpasswd
