@@ -6,7 +6,7 @@ vmUser=''
 vmLocation=''
 vmOpenPort=80 
 storageAccountName=""
-storogeAccountFileShareName=""
+storageAccountFileShareName=""
 passwordHash=''
 
 echo write the basic auth credentials in nginx file
@@ -45,7 +45,7 @@ create_AzureStorageAndFileShare(){
  storagePrimaryKey=$(az storage account keys list --resource-group $rgName --account-name $storageAccountName --query "[0].value" | tr -d '"')
 
  echo -- create the file share
- az storage share create --name $storogeAccountFileShareName --connection-string $storageConnexionString
+ az storage share create --name $storageAccountFileShareName --connection-string $storageConnexionString
 }
 
 run_LogServer(){
