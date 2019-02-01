@@ -1,14 +1,13 @@
 #!/bin/bash 
 
-rgName='logservertestrg'
-vmName='logservertra'
-vmUser='tranise'
-vmLocation='westeurope'
+rgName=''
+vmName=''
+vmUser=''
+vmLocation=''
 vmOpenPort=80 
-storageAccountName="tralogstorage12312"
-storogeAccountFileShareName="logs"
-#https://www.web2generators.com/apache-tools/htpasswd-generator
-passwordHash='tranise:$apr1$4t5rn1oy$G7uJ/ujh9ujVXiPlstSVB1'
+storageAccountName=""
+storogeAccountFileShareName=""
+passwordHash=''
 
 echo write the basic auth credentials in nginx file
 echo $passwordHash > ./log_server/nginx/.htpasswd
