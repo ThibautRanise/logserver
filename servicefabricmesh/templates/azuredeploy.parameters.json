@@ -2,14 +2,14 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "registryServer": { "value": "traniseregistry.azurecr.io" },
-    "registryUserName": { "value": "traniseRegistry" },
+    "registryServer": { "value": "" },
+    "registryUserName": { "value": "" },
     "registryPassword": { "value": "" },
-    "elasticSearchImage": { "value": "es_elasticsearch:dev" },
-    "kibanaImage": { "value": "es_kibana:latest" },
-    "nginxImage": { "value": "es_proxy:dev" },
-    "fileShareName": { "value": "logserverdata" },
-    "storageAccountName": { "value": "tralogserver" },
+    "elasticSearchImage": { "value": "" },
+    "kibanaImage": { "value": "" },
+    "nginxImage": { "value": "" },
+    "fileShareName": { "value": "" },
+    "storageAccountName": { "value": "" },
     "storageAccountKey": { "value": "" }
   }
 }
