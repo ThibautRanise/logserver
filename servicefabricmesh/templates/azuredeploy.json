@@ -1,0 +1,279 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Location of the resources (e.g. westus, eastus, westeurope)."
+      }
+    },
+    "registryServer": {
+      "defaultValue": "",
+      "type": "string",
+      "metadata": {
+        "description": "Private image registry server. For example, '<myacr>.azurecr.io'"
+      }
+    },
+    "registryUserName": {
+      "defaultValue": "",
+      "type": "string",
+      "metadata": {
+        "description": "User name for the private image registry server. For Azure Container Registry the CLI command 'az acr credential show --name <myacr> --query \"username\"' will show the username."
+      }
+    },
+    "registryPassword": {
+      "defaultValue": "",
+      "type": "SecureString",
+      "metadata": {
+        "description": "Password for the private image registry server. For Azure Container Registry the CLI command 'az acr credential show --name <myacr> --query \"passwords[0].value\"' will show the password."
+      }
+    },
+    "elasticSearchImage": {
+      "defaultValue": "",
+      "type": "string"
+    },
+    "kibanaImage": {
+      "defaultValue": "",
+      "type": "string"
+    },
+    "nginxImage": {
+      "defaultValue": "",
+      "type": "string"
+    },
+    "fileShareName": {
+      "type": "string"
+    },
+    "storageAccountName": {
+      "type": "string"
+    },
+    "storageAccountKey": {
+      "type": "securestring"
+    }
+  },
+  "variables": {
+    "elasticSearchImageFull": "[concat(parameters('registryServer'), '/', parameters('elasticSearchImage'))]",
+    "kibanaImageFull": "[concat(parameters('registryServer'), '/', parameters('kibanaImage'))]",
+    "nginxImageFull": "[concat(parameters('registryServer'), '/', parameters('nginxImage'))]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2018-09-01-preview",
+      "name": "AppNetwork",
+      "type": "Microsoft.ServiceFabricMesh/networks",
+      "location": "[parameters('location')]",
+      "dependsOn": [],
+      "properties": {
+        "kind": "Local",
+        "networkAddressPrefix": "10.0.0.0/24"
+      }
+    },
+    {
+      "apiVersion": "2018-09-01-preview",
+      "name": "LogServerGateway",
+      "type": "Microsoft.ServiceFabricMesh/gateways",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "Microsoft.ServiceFabricMesh/networks/AppNetwork"
+      ],
+      "properties": {
+        "description": "Service Fabric Mesh Gateway for LogServer sample.",
+        "sourceNetwork": {
+          "name": "Open"
+        },
+        "destinationNetwork": {
+          "name": "[resourceId('Microsoft.ServiceFabricMesh/networks', 'AppNetwork')]"
+        },
+        "tcp": [
+          {
+            "name": "nginx",
+            "port": 80,
+            "destination": {
+              "applicationName": "LogServerApp",
+              "serviceName": "nginx",
+              "endpointName": "NginxListener"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2018-09-01-preview",
+      "name": "LogServerApp",
+      "type": "Microsoft.ServiceFabricMesh/applications",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "Microsoft.ServiceFabricMesh/networks/AppNetwork"
+      ],
+      "properties": {
+        "description": "Service Fabric Mesh LogServer Application.",
+        "services": [
+          {
+            "type": "Microsoft.ServiceFabricMesh/services",
+            "name": "elasticsearch",
+            "properties": {
+              "description": "Elastic search instance",
+              "osType": "linux",
+              "codePackages": [
+                {
+                  "name": "ElasticSearchCode",
+                  "image": "[variables('elasticSearchImageFull')]",
+                  "endpoints": [
+                    {
+                      "name": "ElasticSearchListener",
+                      "port": "9200"
+                    }
+                  ],
+                  "volumeRefs": [
+                    {
+                      "name": "[resourceId('Microsoft.ServiceFabricMesh/volumes', 'dataVolume')]",
+                      "destinationPath": "/usr/share/elasticsearch/data"
+                    }
+                  ],
+                  "resources": {
+                    "requests": {
+                      "cpu": "1",
+                      "memoryInGB": "1"
+                    }
+                  },
+                  "imageRegistryCredential": {
+                    "server": "[parameters('registryServer')]",
+                    "username": "[parameters('registryUserName')]",
+                    "password": "[parameters('registryPassword')]"
+                  }
+                }
+              ],
+              "replicaCount": "1",
+              "networkRefs": [
+                {
+                  "name": "[resourceId('Microsoft.ServiceFabricMesh/networks', 'AppNetwork')]",
+                  "endpointRefs": [
+                    {
+                      "name": "ElasticSearchListener"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "Microsoft.ServiceFabricMesh/services",
+            "name": "kibana",
+            "properties": {
+              "description": "Kibana portal",
+              "osType": "linux",
+              "codePackages": [
+                {
+                  "name": "KibanaCode",
+                  "image": "[variables('kibanaImageFull')]",
+                  "endpoints": [
+                    {
+                      "name": "KibanaListener",
+                      "port": "5601"
+                    }
+                  ],
+                  "environmentVariables": [
+                    {
+                      "name": "SERVER_NAME",
+                      "value": "kibana"
+                    },
+                    {
+                      "name": "ELASTICSEARCH_URL",
+                      "value": "http://elasticsearch:9200"
+                    }
+                  ],
+                  "resources": {
+                    "requests": {
+                      "cpu": "1",
+                      "memoryInGB": "1"
+                    }
+                  },
+                  "imageRegistryCredential": {
+                    "server": "[parameters('registryServer')]",
+                    "username": "[parameters('registryUserName')]",
+                    "password": "[parameters('registryPassword')]"
+                  }
+                }
+              ],
+              "replicaCount": "1",
+              "networkRefs": [
+                {
+                  "name": "[resourceId('Microsoft.ServiceFabricMesh/networks', 'AppNetwork')]",
+                  "endpointRefs": [
+                    {
+                      "name": "KibanaListener"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "Microsoft.ServiceFabricMesh/services",
+            "name": "nginx",
+            "properties": {
+              "description": "Nginx proxy",
+              "osType": "linux",
+              "codePackages": [
+                {
+                  "name": "NginxCode",
+                  "image": "[variables('nginxImageFull')]",
+                  "endpoints": [
+                    {
+                      "name": "NginxListener",
+                      "port": "80"
+                    }
+                  ],
+                  "resources": {
+                    "requests": {
+                      "cpu": "1",
+                      "memoryInGB": "1"
+                    }
+                  },
+                  "imageRegistryCredential": {
+                    "server": "[parameters('registryServer')]",
+                    "username": "[parameters('registryUserName')]",
+                    "password": "[parameters('registryPassword')]"
+                  }
+                }
+              ],
+              "replicaCount": "1",
+              "networkRefs": [
+                {
+                  "name": "[resourceId('Microsoft.ServiceFabricMesh/networks', 'AppNetwork')]",
+                  "endpointRefs": [
+                    {
+                      "name": "NginxListener"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2018-09-01-preview",
+      "name": "dataVolume",
+      "type": "Microsoft.ServiceFabricMesh/volumes",
+      "location": "[parameters('location')]",
+      "dependsOn": [],
+      "properties": {
+        "provider": "SFAzureFile",
+        "azureFileParameters": {
+          "shareName": "[parameters('fileShareName')]",
+          "accountName": "[parameters('storageAccountName')]",
+          "accountKey": "[parameters('storageAccountKey')]"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "publicIPAddress": {
+      "value": "[reference('LogServerGateway').ipAddress]",
+      "type": "string"
+    }
+  }
+}
