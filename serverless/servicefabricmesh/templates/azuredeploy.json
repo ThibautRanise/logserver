@@ -85,7 +85,7 @@
         "destinationNetwork": {
           "name": "[resourceId('Microsoft.ServiceFabricMesh/networks', 'AppNetwork')]"
         },
-        "tcp": [
+        "Http": [
           {
             "name": "nginx",
             "port": 80,
@@ -180,7 +180,7 @@
                     },
                     {
                       "name": "ELASTICSEARCH_URL",
-                      "value": "http://elasticsearch:9200"
+                      "value": "http://localhost:9200"
                     }
                   ],
                   "resources": {
