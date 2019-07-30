@@ -1,0 +1,129 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "containerGroupName": {
+      "type": "string",
+      "defaultValue": "logserver",
+      "metadata": {
+        "description": "Container Group name."
+      }
+    },
+    "imageRegistryLoginServer": {
+      "type": "string"
+    },
+    "imageRegistryUsername": {
+      "type": "string"
+    },
+    "imageRegistryPassword": {
+      "type": "string"
+    }
+  },
+  "variables": {
+    "tagelasticsearch": "dev",
+    "tagkibana": "dev",
+    "tagnginx": "acr",
+    "nginxname": "proxy",
+    "nginximage": "[concat(parameters('imageRegistryLoginServer'), '/', 'es_proxy:', variables('tagnginx'))]",
+    "elasticsearchname": "elasticsearch",
+    "elasticsearchimage": "[concat(parameters('imageRegistryLoginServer'), '/', 'es_elasticsearch:', variables('tagelasticsearch'))]",
+    "kibananame": "kibana",
+    "kibanaimage": "[concat(parameters('imageRegistryLoginServer'), '/' ,'es_kibana:', variables('tagkibana'))]"
+  },
+  "resources": [
+    {
+      "name": "[parameters('containerGroupName')]",
+      "type": "Microsoft.ContainerInstance/containerGroups",
+      "apiVersion": "2018-04-01",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "containers": [
+          {
+            "name": "[variables('elasticsearchname')]",
+            "properties": {
+              "image": "[variables('elasticsearchimage')]",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGb": 3
+                }
+              },
+              "ports": [
+                {
+                  "port": 9200
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('nginxname')]",
+            "properties": {
+              "image": "[variables('nginximage')]",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGb": 3
+                }
+              },
+              "ports": [
+                {
+                  "port": 80
+                }
+              ]
+            }
+          },
+          {
+            "name": "[variables('kibananame')]",
+            "properties": {
+              "image": "[variables('kibanaimage')]",
+              "resources": {
+                "requests": {
+                  "cpu": 1,
+                  "memoryInGb": 3
+                }
+              },
+              "ports": [
+                {
+                  "port": 5601
+                }
+              ],
+              "environmentVariables": [
+                {
+                  "name": "SERVER_NAME",
+                  "value": "kibana"
+                },
+                {
+                  "name": "ELASTICSEARCH_URL",
+                  "value": "http://localhost:9200"
+                }
+              ]
+            }
+          }
+        ],
+        "osType": "Linux",
+        "ipAddress": {
+          "type": "Public",
+          "ports": [
+            {
+              "protocol": "tcp",
+              "port": "80"
+            }
+          ]
+        },
+        "imageRegistryCredentials": [
+          {
+            "server": "[parameters('imageRegistryLoginServer')]",
+            "username": "[parameters('imageRegistryUsername')]",
+            "password": "[parameters('imageRegistryPassword')]"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "containerIPv4Address": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerInstance/containerGroups/', parameters('containerGroupName'))).ipAddress.ip]"
+    }
+  }
+}
